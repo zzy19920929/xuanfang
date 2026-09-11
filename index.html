@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>选房信息查询</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #f5f6fa;
+      color: #222;
+    }
+
+    .search {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #fff;
+      padding: 16px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, .08);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .search label {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    #orderInput {
+      width: 260px;
+      height: 40px;
+      padding: 0 12px;
+      border: 1px solid #d9dce5;
+      border-radius: 7px;
+      font-size: 16px;
+      outline: none;
+    }
+
+    #orderInput:focus {
+      border-color: #466CFF;
+    }
+
+    button {
+      height: 40px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 7px;
+      background: #466CFF;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    #count {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .sheet {
+      background: #fff;
+      padding: 16px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
+      overflow-x: auto;
+    }
+
+    .sheet h2 {
+      font-size: 18px;
+      margin: 0 0 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 600px;
+    }
+
+    th,
+    td {
+      border: 1px solid #ddd;
+      padding: 10px 12px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #f1f3f8;
+    }
+
+    .match,
+    .match td {
+      background: #FD4444 !important;
+      color: #fff !important;
+    }
+
+    @media (max-width: 700px) {
+      body {
+        padding: 10px;
+      }
+
+      .search {
+        flex-wrap: wrap;
+      }
+
+      #orderInput {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="search">
+    <label for="orderInput">顺序号查询</label>
+    <input id="orderInput" type="text" placeholder="请输入顺序号" autocomplete="off">
+    <button id="confirmBtn" type="button">确认</button>
+    <span id="count"></span>
+  </div>
+
+  <div id="app"></div>
+
+  <script>
+    const sheets = [
+      { title: '珩边一里13号楼西边套01', rows: [['序号', '顺序号', '房号', '销售总价', '套内面积'], ['1', '508', '2301', '474403', '51.58'], ['2', '510', '2901', '478460', '51.58']] },
+      { title: '珩边三里2号楼东边套08', rows: [['序号', '顺序号', '房号', '销售总价', '套内面积'], ['3', '218', '1208', '422852', '52.66'], ['4', '226', '1308', '423545', '52.66'], ['5', '242', '1508', '423892', '52.66'], ['6', '250', '1608', '423199', '52.66'], ['7', '258', '1708', '422505', '52.66'], ['8', '274', '1908', '446421', '52.66'], ['9', '282', '2008', '445728', '52.66'], ['10', '290', '2108', '445034', '52.66'], ['11', '298', '2208', '443648', '52.66'], ['12', '186', '808', '422367', '52.66'], ['13', '194', '908', '421163', '52.66'], ['14', '202', '1008', '419776', '52.66'], ['15', '210', '1108', '418735', '52.66'], ['16', '306', '2308', '465068', '52.66'], ['17', '314', '2408', '455432', '52.67'], ['18', '322', '2508', '454870', '52.66'], ['19', '330', '2608', '447114', '52.66']] },
+      { title: '珩边一里3号楼西边套01', rows: [['序号', '顺序号', '房号', '销售总价', '套内面积'], ['20', '514', '1201', '419207', '51.4'], ['21', '518', '2901', '448012', '51.85']] },
+      { title: '珩边一里13号楼东次边套07', rows: [['序号', '顺序号', '房号', '销售总价', '套内面积'], ['22', '507', '1907', '445811', '51.65']] },
+      { title: '珩边一里3号楼东次边套07', rows: [['序号', '顺序号', '房号', '销售总价', '套内面积'], ['23', '515', '1507', '427217', '51.65']] },
+      { title: '珩边三里2号楼东次边套07', rows: [['序号', '顺序号', '房号', '销售总价', '套内面积'], ['24', '217', '1207', '410609', '53.45'], ['25', '225', '1307', '411313', '53.45'], ['26', '241', '1507', '415535', '53.45'], ['27', '249', '1607', '414127', '53.45'], ['28', '257', '1707', '412720', '53.45'], ['29', '273', '1907', '435238', '53.45'], ['30', '281', '2007', '434535', '53.45'], ['31', '289', '2107', '433127', '53.45'], ['32', '297', '2207', '431720', '53.45'], ['33', '185', '807', '410257', '53.41'], ['34', '193', '907', '408443', '53.41'], ['35', '201', '1007', '407037', '53.41'], ['36', '209', '1107', '405983', '53.45'], ['37', '305', '2307', '444387', '53.45'], ['38', '313', '2407', '443683', '53.45'], ['39', '321', '2507', '435942', '53.45']] },
+      { title: '珩边三里2号楼中间套05', rows: [['序号', '顺序号', '房号', '销售总价', '套内面积'], ['40', '215', '1205', '383299', '53.43'], ['41', '223', '1305', '384002', '53.43'], ['42', '239', '1505', '388222', '53.43'], ['43', '247', '1605', '386815', '53.43'], ['44', '255', '1705', '385408', '53.43'], ['45', '271', '1905', '407211', '53.43'], ['46', '279', '2005', '406507', '53.43'], ['47', '287', '2105', '405804', '53.43'], ['48', '295', '2205', '404398', '53.43'], ['49', '183', '805', '383017', '53.34'], ['50', '191', '905', '381014', '53.34'], ['51', '199', '1005', '379609', '53.34'], ['52', '207', '1105', '378556', '53.43'], ['53', '303', '2305', '416354', '53.43'], ['54', '311', '2405', '415650', '53.43'], ['55', '319', '2505', '407914', '53.43']] }
+    ];
+
+    const app = document.getElementById('app');
+    const input = document.getElementById('orderInput');
+    const count = document.getElementById('count');
+
+    function render() {
+      app.innerHTML = '';
+
+      sheets.forEach(sheet => {
+        const section = document.createElement('section');
+        section.className = 'sheet';
+
+        const h = document.createElement('h2');
+        h.textContent = sheet.title;
+        section.appendChild(h);
+
+        const table = document.createElement('table');
+
+        const thead = document.createElement('thead');
+        const header = document.createElement('tr');
+
+        sheet.rows[0].forEach(value => {
+          const th = document.createElement('th');
+          th.textContent = value;
+          header.appendChild(th);
+        });
+
+        thead.appendChild(header);
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
+
+        sheet.rows.slice(1).forEach(row => {
+          const tr = document.createElement('tr');
+
+          row.forEach(value => {
+            const td = document.createElement('td');
+            td.textContent = value;
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+        section.appendChild(table);
+        app.appendChild(section);
+      });
+    }
+
+    function search() {
+      const keyword = input.value.trim();
+      const rows = document.querySelectorAll('#app tbody tr');
+      let matched = 0;
+      let first = null;
+
+      if (!keyword) {
+        count.textContent = '';
+        return;
+      }
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const orderNumber = cells[1] ? cells[1].textContent.trim() : '';
+
+        if (orderNumber === keyword) {
+          row.classList.add('match');
+          matched++;
+
+          if (!first) {
+            first = row;
+          }
+        }
+      });
+
+      count.textContent = '本次找到 ' + matched + ' 条';
+
+      if (first) {
+        first.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }
+    }
+
+    render();
+
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        search();
+      }
+    });
+
+    document.getElementById('confirmBtn').addEventListener('click', search);
+  </script>
+</body>
+
+</html>
