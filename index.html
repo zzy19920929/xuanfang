@@ -61,6 +61,10 @@
       cursor: pointer;
     }
 
+    #clearSavedBtn {
+      background: #ff7b7b;
+    }
+
     #count {
       color: #666;
       font-size: 14px;
@@ -125,6 +129,7 @@
     <label for="orderInput">顺序号查询</label>
     <input id="orderInput" type="text" placeholder="请输入顺序号" autocomplete="off">
     <button id="confirmBtn" type="button">确认</button>
+    <button id="clearSavedBtn" type="button">清除已保存</button>
     <span id="count"></span>
   </div>
 
@@ -234,6 +239,26 @@
     const app = document.getElementById('app');
     const input = document.getElementById('orderInput');
     const count = document.getElementById('count');
+    const STORAGE_KEY = 'xuanfang-saved-orders';
+    const savedOrderNumbers = new Set(loadSavedOrders());
+
+    function loadSavedOrders() {
+      try {
+        const rawValue = localStorage.getItem(STORAGE_KEY);
+        if (!rawValue) {
+          return [];
+        }
+
+        const parsed = JSON.parse(rawValue);
+        return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string' && item.trim()) : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function persistSavedOrders() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(savedOrderNumbers)));
+    }
 
     function render() {
       app.innerHTML = '';
@@ -264,6 +289,13 @@
 
         sheet.rows.slice(1).forEach(row => {
           const tr = document.createElement('tr');
+          const orderNumber = row[1] ? row[1].trim() : '';
+
+          if (savedOrderNumbers.has(orderNumber)) {
+            tr.classList.add('match');
+          }
+
+          tr.dataset.orderNumber = orderNumber;
 
           row.forEach(value => {
             const td = document.createElement('td');
@@ -280,32 +312,43 @@
       });
     }
 
+    function getMatchedRows(keyword) {
+      const matches = [];
+
+      sheets.forEach(sheet => {
+        sheet.rows.slice(1).forEach(row => {
+          const orderNumber = row[1] ? row[1].trim() : '';
+
+          if (orderNumber === keyword) {
+            matches.push(row);
+          }
+        });
+      });
+
+      return matches;
+    }
+
     function search() {
       const keyword = input.value.trim();
-      const rows = document.querySelectorAll('#app tbody tr');
-      let matched = 0;
-      let first = null;
 
       if (!keyword) {
         count.textContent = '';
         return;
       }
 
-      rows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        const orderNumber = cells[1] ? cells[1].textContent.trim() : '';
+      const matchedRows = getMatchedRows(keyword);
 
-        if (orderNumber === keyword) {
-          row.classList.add('match');
-          matched++;
+      if (matchedRows.length === 0) {
+        count.textContent = '未找到该顺序号';
+        return;
+      }
 
-          if (!first) {
-            first = row;
-          }
-        }
-      });
+      savedOrderNumbers.add(keyword);
+      persistSavedOrders();
+      render();
 
-      count.textContent = '本次找到 ' + matched + ' 条';
+      const first = document.querySelector('#app tbody tr[data-order-number="' + keyword + '"]');
+      count.textContent = '本次找到 ' + matchedRows.length + ' 条，已保存';
 
       if (first) {
         first.scrollIntoView({
@@ -313,6 +356,25 @@
           block: 'center'
         });
       }
+    }
+
+    function clearSavedOrders() {
+      if (savedOrderNumbers.size === 0) {
+        count.textContent = '当前没有已保存的顺序号';
+        return;
+      }
+
+      const confirmed = window.confirm('确定清除所有已保存的顺序号吗？');
+
+      if (!confirmed) {
+        return;
+      }
+
+      savedOrderNumbers.clear();
+      persistSavedOrders();
+      render();
+      input.value = '';
+      count.textContent = '已清除所有已保存的顺序号';
     }
 
     render();
@@ -324,6 +386,7 @@
     });
 
     document.getElementById('confirmBtn').addEventListener('click', search);
+    document.getElementById('clearSavedBtn').addEventListener('click', clearSavedOrders);
   </script>
 </body>
 
